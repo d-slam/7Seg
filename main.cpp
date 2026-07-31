@@ -13,7 +13,6 @@ public:
 		for (byte i = 0; i < 3; i++)
 			pinDigit[i] = dig[i];
 	}
-
 	void init()
 	{
 		for (int i = 0; i < 7; i++)
@@ -97,16 +96,18 @@ public:
 		dpState[2] = false;
 	}
 
-	void setDP(byte digit, bool on)
+	inline void setDP(byte digit, bool on)
 	{
-		if (digit < 3)
-			dpState[digit] = on;
+
+		dpState[0] = on;
+		dpState[1] = on;
+		dpState[2] = on;
 	}
 
 private:
-	byte pinSegment[7];
 	byte pinDigit[3];
 	byte pinDp;
+	byte pinSegment[7];
 
 	byte currentDigit = 0;
 	byte values[3] = {10, 10, 10}; // 10 = leer
@@ -115,14 +116,14 @@ private:
 	unsigned long lastRefresh = 0;
 	const unsigned int refreshTime = 2; // ms
 
-	// static const bool font[11][7];
-
-	void disableDigits()
+	inline void disableDigits()
 	{
-		for (int i = 0; i < 3; i++)
-			digitalWrite(pinDigit[i], LOW);
+		digitalWrite(pinDigit[0], LOW);
+		digitalWrite(pinDigit[1], LOW);
+		digitalWrite(pinDigit[2], LOW);
 	}
 
+	// static const bool font[11][7];
 	const bool font[12][7] =
 		{
 			// A B C D E F G
@@ -168,7 +169,7 @@ void setup()
 
 void loop()
 {
-	display.show(millis() / 1000);	// 
+	display.show(millis() / 1000); //
 
 	display.update();
 }
