@@ -13,9 +13,10 @@ public:
 		for (byte i = 0; i < 3; i++)
 			pinDigit[i] = dig[i];
 	}
-	void init()
+
+	void begin()
 	{
-		for (int i = 0; i < 7; i++)
+		for (byte i = 0; i < 7; i++)
 		{
 			pinMode(pinSegment[i], OUTPUT);
 			digitalWrite(pinSegment[i], LOW);
@@ -24,97 +25,125 @@ public:
 		pinMode(pinDp, OUTPUT);
 		digitalWrite(pinDp, LOW);
 
-		for (int i = 0; i < 3; i++)
+		for (byte i = 0; i < 3; i++)
 		{
 			pinMode(pinDigit[i], OUTPUT);
-			digitalWrite(pinDigit[i], LOW); // gemeinsame Kathode aus
+			digitalWrite(pinDigit[i], LOW);
 		}
 	}
+
 	void update()
 	{
-		if (millis() - lastRefresh < refreshTime)
+		if (millis() - lastRefresh < 2)
 			return;
 
 		lastRefresh = millis();
 
 		disableDigits();
 
+		byte pattern = font[10]; // leer
+
 		byte n = values[currentDigit];
 
-		for (int i = 0; i < 7; i++)
-			digitalWrite(pinSegment[i], font[n][i]);
+		if (n <= 9)
+			pattern = font[n];
+		else if (n == 11)
+			pattern = font[11];
 
-		digitalWrite(pinDp, dpState[currentDigit]);
+		if (dpState[currentDigit])
+			pattern |= 0b10000000;
 
-		// gemeinsame Kathode:
+		writeSegments(pattern);
+
 		digitalWrite(pinDigit[currentDigit], HIGH);
 
 		currentDigit++;
+
 		if (currentDigit >= 3)
 			currentDigit = 0;
 	}
 
-	void show(int value)
+	void show(int number)
 	{
-		if (value > 999)
-			value = 999;
+		if (number > 999)
+			number = 999;
 
-		if (value < -99)
-			value = -99;
+		if (number < -99)
+			number = -99;
 
-		if (value < 0)
+		if (number < 0)
 		{
-			value = -value;
+			number = -number;
 
-			values[0] = 11; // '-'
-			values[1] = value / 10;
-			values[2] = value % 10;
+			values[0] = 11; // minus
+			values[1] = number / 10;
+			values[2] = number % 10;
 
-			if (value < 10)
-				values[1] = 10; // führende Stelle leer
+			if (number < 10)
+				values[1] = 10;
 		}
 		else
 		{
-			values[0] = value / 100;
-			values[1] = (value / 10) % 10;
-			values[2] = value % 10;
+			values[0] = number / 100;
+			values[1] = (number / 10) % 10;
+			values[2] = number % 10;
 
-			if (value < 100)
-				values[0] = 10; // leer
-			if (value < 10)
-				values[1] = 10; // leer
+			if (number < 100)
+				values[0] = 10;
+
+			if (number < 10)
+				values[1] = 10;
 		}
 	}
-	void clear()
+
+	void setDP(byte pos, bool state)
 	{
-		values[0] = 10;
-		values[1] = 10;
-		values[2] = 10;
-
-		dpState[0] = false;
-		dpState[1] = false;
-		dpState[2] = false;
-	}
-
-	inline void setDP(byte digit, bool on)
-	{
-
-		dpState[0] = on;
-		dpState[1] = on;
-		dpState[2] = on;
+		if (pos < 3)
+			dpState[pos] = state;
 	}
 
 private:
+	byte pinSegment[7];
 	byte pinDigit[3];
 	byte pinDp;
-	byte pinSegment[7];
+
+	byte values[3] =
+		{
+			10, 10, 10};
+
+	bool dpState[3] =
+		{
+			false, false, false};
 
 	byte currentDigit = 0;
-	byte values[3] = {10, 10, 10}; // 10 = leer
-	bool dpState[3] = {false, false, false};
 
 	unsigned long lastRefresh = 0;
-	const unsigned int refreshTime = 2; // ms
+
+	// Bit:
+	// 0=A
+	// 1=B
+	// 2=C
+	// 3=D
+	// 4=E
+	// 5=F
+	// 6=G
+	// 7=DP
+
+	const byte font[12] =
+		{
+			0b00111111, // 0
+			0b00000110, // 1
+			0b01011011, // 2
+			0b01001111, // 3
+			0b01100110, // 4
+			0b01101101, // 5
+			0b01111101, // 6
+			0b00000111, // 7
+			0b01111111, // 8
+			0b01101111, // 9
+			0b00000000, // leer
+			0b01000000	// minus
+	};
 
 	inline void disableDigits()
 	{
@@ -123,27 +152,27 @@ private:
 		digitalWrite(pinDigit[2], LOW);
 	}
 
-	// static const bool font[11][7];
-	const bool font[12][7] =
+	inline void writeSegments(byte pattern)
+	{
+		for (byte i = 0; i < 7; i++)
 		{
-			// A B C D E F G
-			{1, 1, 1, 1, 1, 1, 0}, // 0
-			{0, 1, 1, 0, 0, 0, 0}, // 1
-			{1, 1, 0, 1, 1, 0, 1}, // 2
-			{1, 1, 1, 1, 0, 0, 1}, // 3
-			{0, 1, 1, 0, 0, 1, 1}, // 4
-			{1, 0, 1, 1, 0, 1, 1}, // 5
-			{1, 0, 1, 1, 1, 1, 1}, // 6
-			{1, 1, 1, 0, 0, 0, 0}, // 7
-			{1, 1, 1, 1, 1, 1, 1}, // 8
-			{1, 1, 1, 1, 0, 1, 1}, // 9
-			{0, 0, 0, 0, 0, 0, 0}, // leer
-			{0, 0, 0, 0, 0, 0, 1}  // -
-	};
+			digitalWrite(pinSegment[i], pattern & (1 << i));
+		}
+
+		digitalWrite(pinDp, pattern & 0b10000000);
+	}
 };
 
-const byte pinSeg[7] = {21, 20, 19, 18, 17, 16, 15};
-const byte pinDig[3] = {7, 8, 9};
+// ----------------------------
+
+const byte pinSeg[7] =
+	{
+		21, 20, 19, 18, 17, 16, 15};
+
+const byte pinDig[3] =
+	{
+		7, 8, 9};
+
 const byte pinDp = 14;
 
 Display3Digit display(pinSeg, pinDig, pinDp);
@@ -151,25 +180,15 @@ Display3Digit display(pinSeg, pinDig, pinDp);
 void setup()
 {
 	Serial.begin(9600);
-	DBG("Serial online!");
 
-	// int zahl = 123;
+	DBG("Display gestartet");
 
-	// int h = zahl / 100;
-	// int z = (zahl / 10) % 10;
-	// int e = zahl % 10;
-
-	// DBG(zahl);
-	// DBG(h);
-	// DBG(z);
-	// DBG(e);
-
-	display.init();
+	display.begin();
 }
 
 void loop()
 {
-	display.show(millis() / 1000); //
+	display.show(millis() / 1000);
 
 	display.update();
 }
